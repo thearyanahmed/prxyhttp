@@ -1,63 +1,78 @@
-// This is the destination server
-// #![deny(warnings)]  // FIXME: https://github.com/rust-lang/rust/issues/62411
-#![warn(rust_2018_idioms)]
-#[allow(dead_code)]
-
-use bytes::Bytes;
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{ Request, Response, StatusCode};
-use tokio::net::TcpListener;
-use std::convert::Infallible;
 use std::env;
+use std::fmt::format;
+use bytes::Bytes;
+use http_body_util::Full;
+use hyper::server::conn::http1;
+use hyper::service::Service;
+use hyper::{body::Incoming as IncomingBody, Request, Response};
+use tokio::net::TcpListener;
+
+use std::future::Future;
+use std::net::SocketAddr;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
 use hyper_util::rt::TokioIo;
 
-// Using service_fn, we can turn this function into a `Service`.
-async fn param_example(
-    req: Request<hyper::body::Incoming>,
-) -> Result<Response<BoxBody<Bytes, Infallible>>, hyper::Error> {
-    println!("serving request\n{:#?}",req.body());
 
-    let body = "{'hello': 'world'}"; // not json
-
-    Ok(Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(full(body))
-        .unwrap())
-}
-
-fn empty() -> BoxBody<Bytes, Infallible> {
-    Empty::<Bytes>::new().boxed()
-}
-
-fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, Infallible> {
-    Full::new(chunk.into()).boxed()
-}
+type Counter = i32;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    pretty_env_logger::init();
-
     let args: Vec<_> = env::args().collect();
-
     let addr = &args[1];
-    // let addr: SocketAddr = ([127, 0, 0, 1], 1337).into();
-
 
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
+
+    let svc = Svc {
+        counter: Arc::new(Mutex::new(0)),
+    };
+
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
-
+        let svc_clone = svc.clone();
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(param_example))
-                .await
-            {
-                println!("Error serving connection: {:?}", err);
+            if let Err(err) = http1::Builder::new().serve_connection(io, svc_clone).await {
+                println!("Failed to serve connection: {:?}", err);
             }
         });
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Svc {
+    counter: Arc<Mutex<Counter>>,
+}
+
+impl Service<Request<IncomingBody>> for Svc {
+    type Response = Response<Full<Bytes>>;
+    type Error = hyper::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn call(&self, req: Request<IncomingBody>) -> Self::Future {
+        fn mk_response(s: String) -> Result<Response<Full<Bytes>>, hyper::Error> {
+            Ok(Response::builder().body(Full::new(Bytes::from(s))).unwrap())
+        }
+
+        let uri_path = req.uri().path();
+
+        self.count();
+
+        let body = format!("count: {:?}", *self.counter);
+
+        let res = match req.uri().path() {
+            "/test" => mk_response(format!("test! counter = {:?}", self.counter)),
+            _ => return Box::pin(async { mk_response(body.into()) })
+        };
+
+        Box::pin(async { res })
+    }
+}
+
+impl Svc {
+    fn count(&self) {
+        let mut counter = self.counter.lock().expect("lock poisioned");
+        *counter += 1;
     }
 }
