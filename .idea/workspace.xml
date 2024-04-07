@@ -10,7 +10,6 @@
     <list default="true" id="6596952b-9c17-4fbe-9f05-8f6af9414b11" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/proxy_dev.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/proxy_dev.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,7 +41,7 @@
   "keyToString": {
     "ASKED_ADD_EXTERNAL_FILES": "true",
     "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Cargo.Run t.executor": "Run",
+    "Cargo.Run t.executor": "Debug",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
@@ -108,7 +107,7 @@
       <updated>1712365338115</updated>
       <workItem from="1712365339176" duration="1137000" />
       <workItem from="1712502057500" duration="716000" />
-      <workItem from="1712502785571" duration="2128000" />
+      <workItem from="1712502785571" duration="5449000" />
     </task>
     <servers />
   </component>
