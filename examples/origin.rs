@@ -1,6 +1,7 @@
 // This is the destination server
 // #![deny(warnings)]  // FIXME: https://github.com/rust-lang/rust/issues/62411
 #![warn(rust_2018_idioms)]
+#[allow(dead_code)]
 
 use bytes::Bytes;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};

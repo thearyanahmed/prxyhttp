@@ -504,6 +504,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "log",
  "pretty_env_logger",
  "tokio",
 ]
