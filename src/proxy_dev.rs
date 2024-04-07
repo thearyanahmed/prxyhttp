@@ -41,10 +41,13 @@ pub fn run() {
         // Establish a new TCP connection to origin_stream
         let mut origin_stream =
             TcpStream::connect(origin_server).expect("Please re-start the origin server");
+
         let handle =
             thread::spawn(move || handle_connection(&mut proxy_stream, &mut origin_stream));
+
         thread_handles.push(handle);
     }
+
     for handle in thread_handles {
         handle.join().expect("Unable to join child thread");
     }
