@@ -1,18 +1,15 @@
 use std::env;
-use std::fmt::format;
 use bytes::Bytes;
 use http_body_util::Full;
 use hyper::server::conn::http1;
 use hyper::service::Service;
-use hyper::{body::Incoming as IncomingBody, Request, Response};
+use hyper::{body::Incoming as IncomingBody, Method, Request, Response};
 use tokio::net::TcpListener;
 
 use std::future::Future;
-use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use hyper_util::rt::TokioIo;
-
 
 type Counter = i32;
 
@@ -55,18 +52,26 @@ impl Service<Request<IncomingBody>> for Svc {
             Ok(Response::builder().body(Full::new(Bytes::from(s))).unwrap())
         }
 
-        let uri_path = req.uri().path();
+        println!("method :{}",req.method());
 
-        self.count();
+         match req.method() == Method::CONNECT {
+            true => {
+                let res = mk_response("".into()); // send e empty string for now
+                Box::pin(async { res })
+            }
+            false => {
+                self.count();
 
-        let body = format!("count: {:?}", *self.counter);
+                let body = format!("count: {:?}", *self.counter);
 
-        let res = match req.uri().path() {
-            "/test" => mk_response(format!("test! counter = {:?}", self.counter)),
-            _ => return Box::pin(async { mk_response(body.into()) })
-        };
+                let res = match req.uri().path() {
+                    "/test" => mk_response(format!("test! counter = {:?}", self.counter)),
+                    _ => return Box::pin(async { mk_response(body.into()) })
+                };
 
-        Box::pin(async { res })
+                Box::pin(async { res })
+            }
+        }
     }
 }
 

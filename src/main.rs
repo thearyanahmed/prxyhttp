@@ -2,27 +2,15 @@
 #[allow(unused_imports)]
 mod proxy_dev;
 
-use tokio::task;
-
-use std::{env, thread};
-use std::fmt::{Display, Formatter, Pointer};
-// use std::net::TcpStream;
-// use std::io::{Read, Write};
-// use std::net::{TcpListener, TcpStream};
+use std::thread;
+// use std::env;
+use std::fmt::{Display, Formatter};
 use std::process::exit;
-use log::{error, info, trace};
-// use tokio::io::{AsyncReadExt,AsyncWriteExt};
+use log::{error, info};
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
-use form_urlencoded::parse;
-use hyper::Method;
 
 extern crate pretty_env_logger;
-
-enum RequestMethod {
-    GET,
-    POST,
-}
 
 struct Request {
     method: String,
@@ -103,26 +91,25 @@ fn handle_connection(proxy_stream: &mut TcpStream) {
         _ => "127.0.0.1:1330"
     };
 
-    trace!("origin server {}",origin_server);
-
+    info!("origin server {}",origin_server);
 
     match TcpStream::connect(origin_server) {
         Ok(mut origin_stream) => {
             let mut out_buffer: Vec<u8> = vec![0; 200];
 
             let _ = origin_stream.write(&mut in_buffer).unwrap();
-            trace!("2: Forwarding request to origin server\n");
+            info!("2: Forwarding request to origin server\n");
 
             // Read response from the backend server
             let _ = origin_stream.read(&mut out_buffer).unwrap();
-            
-            trace!( "3: Received response from origin server: {}",
+
+            info!( "3: Received response from origin server: {}",
                 String::from_utf8_lossy(&out_buffer)
             );
 
             // Write response back to the proxy client
             let _ = proxy_stream.write(&mut out_buffer).unwrap();
-            trace!("4: Forwarding response back to client");
+            info!("4: Forwarding response back to client");
         }
         Err(err) => {
             error!("failed to connect to origin server\n{}",err)
