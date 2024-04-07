@@ -47,7 +47,7 @@ async fn main() {
         }
 
         let request_string = String::from_utf8_lossy(&in_buffer);
-        info!("accepting incoming client request {}",request_string);
+        info!("accepting incoming client request \n{}",request_string);
 
         let request_lines: Vec<&str> = request_string.split("\r\n").collect();
 
