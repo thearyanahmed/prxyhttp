@@ -19,9 +19,11 @@ async fn param_example(
 ) -> Result<Response<BoxBody<Bytes, Infallible>>, hyper::Error> {
     println!("serving request\n{:#?}",req.body());
 
+    let body = "{'hello': 'world'}"; // not json
+
     Ok(Response::builder()
         .status(StatusCode::NOT_FOUND)
-        .body(empty())
+        .body(full(body))
         .unwrap())
 }
 
@@ -41,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let addr = &args[1];
     // let addr: SocketAddr = ([127, 0, 0, 1], 1337).into();
+
 
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);

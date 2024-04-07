@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 #[allow(unused_imports)]
-
 mod proxy_dev;
+
 use tokio::task;
 
 use std::{env, thread};
@@ -13,7 +13,7 @@ use std::process::exit;
 use log::{error, info, trace};
 // use tokio::io::{AsyncReadExt,AsyncWriteExt};
 use std::net::{TcpListener, TcpStream};
-use std::io::{Read};
+use std::io::{Read, Write};
 use form_urlencoded::parse;
 use hyper::Method;
 
@@ -27,7 +27,7 @@ enum RequestMethod {
 struct Request {
     method: String,
     http_version: String,
-    route: String
+    route: String,
 }
 
 impl Display for Request {
@@ -56,7 +56,7 @@ async fn main() {
 
     // Start a socket server on proxy_stream
     match TcpListener::bind(proxy_server) {
-        Ok(proxy) => { proxy_listener = proxy}
+        Ok(proxy) => { proxy_listener = proxy }
         Err(err) => {
             error!("failed to bind to: {} \n error: {}", proxy_server, err);
             exit(2);
@@ -78,11 +78,11 @@ async fn main() {
     }
 }
 
-fn handle_connection(income_stream: &mut TcpStream) {
+fn handle_connection(proxy_stream: &mut TcpStream) {
     let mut in_buffer: Vec<u8> = vec![0; 200];
-    // let mut income_stream = income_stream;
+    // let mut proxy_stream = proxy_stream;
 
-    if let Err(err) = income_stream.read(&mut in_buffer) {
+    if let Err(err) = proxy_stream.read(&mut in_buffer) {
         error!("error in reading from incoming proxy stream: {}", err);
         exit(2);
     }
@@ -105,19 +105,32 @@ fn handle_connection(income_stream: &mut TcpStream) {
 
     trace!("origin server {}",origin_server);
 
+
     match TcpStream::connect(origin_server) {
-        Ok(_) => {
-            info!("got a connection")
-        },
+        Ok(mut origin_stream) => {
+            let mut out_buffer: Vec<u8> = vec![0; 200];
+
+            let _ = origin_stream.write(&mut in_buffer).unwrap();
+            trace!("2: Forwarding request to origin server\n");
+
+            // Read response from the backend server
+            let _ = origin_stream.read(&mut out_buffer).unwrap();
+            
+            trace!( "3: Received response from origin server: {}",
+                String::from_utf8_lossy(&out_buffer)
+            );
+
+            // Write response back to the proxy client
+            let _ = proxy_stream.write(&mut out_buffer).unwrap();
+            trace!("4: Forwarding response back to client");
+        }
         Err(err) => {
             error!("failed to connect to origin server\n{}",err)
         }
     }
-
 }
 
-
-fn parse_request(request: String) -> Request{
+fn parse_request(request: String) -> Request {
     let request_lines: Vec<&str> = request.split("\n").collect();
 
     let first_line = request_lines[0];
@@ -133,5 +146,3 @@ fn parse_request(request: String) -> Request{
         route,
     }
 }
-
-// fn handle_conn(proxy_stream: &mut TcpStream, origin_stream: &mut TcpStream) {}
