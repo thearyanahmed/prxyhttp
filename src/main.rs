@@ -2,6 +2,7 @@
 #[allow(unused_imports)]
 
 mod proxy_dev;
+use tokio::task;
 
 use std::{env, thread};
 use std::fmt::{Display, Formatter, Pointer};
@@ -73,12 +74,13 @@ async fn main() {
     }
 
     for handle in thread_handles {
-        handle.join().expect("Unable to join child thread");
+        handle.join().expect("unable to join child thread");
     }
 }
 
 fn handle_connection(income_stream: &mut TcpStream) {
     let mut in_buffer: Vec<u8> = vec![0; 200];
+    // let mut income_stream = income_stream;
 
     if let Err(err) = income_stream.read(&mut in_buffer) {
         error!("error in reading from incoming proxy stream: {}", err);
@@ -94,14 +96,28 @@ fn handle_connection(income_stream: &mut TcpStream) {
     }
 
     let request = parse_request(request_string);
-    info!("request \n{}",request);
-    // let request_lines : Vec<&str> = request_string.split("\n").collect();
-    // trace!("lines count {} \n request lines {:#?} \n could not find anything", request_lines.len(), request_lines);
+
+    let origin_server = match request.route.as_str() {
+        "/server1" => "127.0.0.1:1337",
+        "/server2" => "127.0.0.1:1338",
+        _ => "127.0.0.1:1330"
+    };
+
+    trace!("origin server {}",origin_server);
+
+    match TcpStream::connect(origin_server) {
+        Ok(_) => {
+            info!("got a connection")
+        },
+        Err(err) => {
+            error!("failed to connect to origin server\n{}",err)
+        }
+    }
+
 }
 
-fn parse_request(request: String) -> Request{
-    // let request = request.lines();
 
+fn parse_request(request: String) -> Request{
     let request_lines: Vec<&str> = request.split("\n").collect();
 
     let first_line = request_lines[0];
@@ -119,15 +135,3 @@ fn parse_request(request: String) -> Request{
 }
 
 // fn handle_conn(proxy_stream: &mut TcpStream, origin_stream: &mut TcpStream) {}
-
-// if let Some(first_line) = request_lines.first() {
-//     let parts: Vec<&str> = first_line.split_whitespace().collect();
-//
-//     if parts.len() >= 2 {
-//         let path = parts[1];
-//         trace!("request path: {}", path);
-//         // Now you can use the path as needed
-//     }
-// } else {
-//     trace!("could not split the request text")
-// }
