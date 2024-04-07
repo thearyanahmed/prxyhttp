@@ -7,52 +7,22 @@ use bytes::Bytes;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
-use hyper::{Method, Request, Response, StatusCode};
+use hyper::{ Request, Response, StatusCode};
 use tokio::net::TcpListener;
-
-use std::collections::HashMap;
 use std::convert::Infallible;
-use std::net::SocketAddr;
+use std::env;
 use hyper_util::rt::TokioIo;
-
-static INDEX: &[u8] = b"<html><body><form action=\"post\" method=\"post\">Name: <input type=\"text\" name=\"name\"><br>Number: <input type=\"text\" name=\"number\"><br><input type=\"submit\"></body></html>";
-static MISSING: &[u8] = b"Missing field";
 
 // Using service_fn, we can turn this function into a `Service`.
 async fn param_example(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, Infallible>>, hyper::Error> {
-    match (req.method(), req.uri().path()) {
-        (&Method::GET, "/") => {
-            let query = if let Some(q) = req.uri().query() {
-                q
-            } else {
-                return Ok(Response::builder()
-                    .status(StatusCode::UNPROCESSABLE_ENTITY)
-                    .body(full(MISSING))
-                    .unwrap());
-            };
+    println!("serving request\n{:#?}",req.body());
 
-            let params = form_urlencoded::parse(query.as_bytes())
-                .into_owned()
-                .collect::<HashMap<String, String>>();
-            let page = if let Some(p) = params.get("page") {
-                p
-            } else {
-                return Ok(Response::builder()
-                    .status(StatusCode::UNPROCESSABLE_ENTITY)
-                    .body(full(MISSING))
-                    .unwrap());
-            };
-            let body = format!("You requested {}", page);
-
-            Ok(Response::new(full(body)))
-        }
-        _ => Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(empty())
-            .unwrap()),
-    }
+    Ok(Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(empty())
+        .unwrap())
 }
 
 fn empty() -> BoxBody<Bytes, Infallible> {
@@ -67,7 +37,10 @@ fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, Infallible> {
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     pretty_env_logger::init();
 
-    let addr: SocketAddr = ([127, 0, 0, 1], 1337).into();
+    let args: Vec<_> = env::args().collect();
+
+    let addr = &args[1];
+    // let addr: SocketAddr = ([127, 0, 0, 1], 1337).into();
 
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on http://{}", addr);
